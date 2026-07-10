@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1,
+    "text": "She ___ a doctor.",
+    "options": {
+      "A": "am",
+      "B": "is",
+      "C": "are"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 2,
+    "text": "I ___ from Ukraine.",
+    "options": {
+      "A": "is",
+      "B": "are",
+      "C": "am"
+    },
+    "correct": "C"
+  },
+  {
+    "id": 3,
+    "text": "There ___ a book on the table.",
+    "options": {
+      "A": "is",
+      "B": "are",
+      "C": "am"
+    },
+    "correct": "A"
+  },
+  {
+    "id": 4,
+    "text": "He can ___ swim very well.",
+    "options": {
+      "A": "to",
+      "B": "—",
+      "C": "swimming"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 5,
+    "text": "What time ___ you usually get up?",
+    "options": {
+      "A": "do",
+      "B": "does",
+      "C": "is"
+    },
+    "correct": "A"
+  },
+  {
+    "id": 6,
+    "text": "I have been living here ___ 2015.",
+    "options": {
+      "A": "for",
+      "B": "since",
+      "C": "from"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 7,
+    "text": "If it rains tomorrow, we ___ stay home.",
+    "options": {
+      "A": "will",
+      "B": "would",
+      "C": "had"
+    },
+    "correct": "A"
+  },
+  {
+    "id": 8,
+    "text": "She said she ___ tired.",
+    "options": {
+      "A": "is",
+      "B": "was",
+      "C": "has been"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 9,
+    "text": "By the time we arrived, the movie ___.",
+    "options": {
+      "A": "already started",
+      "B": "had already started",
+      "C": "has already started"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 10,
+    "text": "I wish I ___ more time to travel.",
+    "options": {
+      "A": "have",
+      "B": "had",
+      "C": "will have"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 11,
+    "text": "Despite ___ hard, he failed the exam.",
+    "options": {
+      "A": "study",
+      "B": "studying",
+      "C": "studied"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 12,
+    "text": "Not only ___ late, but he also forgot his homework.",
+    "options": {
+      "A": "he was",
+      "B": "was he",
+      "C": "he is"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 13,
+    "text": "The report ___ by tomorrow morning.",
+    "options": {
+      "A": "must finish",
+      "B": "must be finished",
+      "C": "must have finished"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 14,
+    "text": "Had I known about the meeting, I ___ attended.",
+    "options": {
+      "A": "would",
+      "B": "would have",
+      "C": "will have"
+    },
+    "correct": "B"
+  },
+  {
+    "id": 15,
+    "text": "She's the kind of person who ___ takes things for granted.",
+    "options": {
+      "A": "rarely",
+      "B": "rare",
+      "C": "rarity"
+    },
+    "correct": "A"
+  }
+]
