@@ -109,7 +109,7 @@ def format_question(question: dict, chosen: str | None = None) -> str:
 
     if chosen is not None:
         answer = options[chosen]
-        question_text = question_text.replace("___", f"[{answer} 😎]", 1)
+        question_text = question_text.replace("___", f"[{answer} 😉 ]", 1)
     else:
         question_text = question_text.replace("___", "[___]")
 
