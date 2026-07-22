@@ -6,10 +6,30 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
+
 def start_test_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Розпочати тест", callback_data="start_test")]
+            [InlineKeyboardButton(text="Старт", callback_data="start_test")]
+        ]
+    )
+
+
+def after_test_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Пройти тест знову",
+                    callback_data="start_test",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Записатися на безкоштовну консультацію",
+                    callback_data="request_consultation",
+                )
+            ],
         ]
     )
 
@@ -30,19 +50,6 @@ def answer_keyboard(question_id: int) -> InlineKeyboardMarkup:
                     text="C",
                     callback_data=f"answer:{question_id}:C",
                 ),
-            ]
-        ]
-    )
-
-
-def consultation_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text="Записатися на безкоштовну консультацію",
-                    callback_data="request_consultation",
-                )
             ]
         ]
     )
