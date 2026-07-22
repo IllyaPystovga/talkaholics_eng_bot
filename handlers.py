@@ -10,8 +10,8 @@ from aiogram.enums import ParseMode
 from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from keyboards import (
+    after_test_keyboard,
     answer_keyboard,
-    consultation_keyboard,
     phone_request_keyboard,
     remove_keyboard,
     start_test_keyboard,
@@ -32,7 +32,7 @@ WELCOME_TEXT = (
     "від A1 до C1.\n\n"
     "📋 15 питань з варіантами відповідей A, B, C.\n"
     "⏱ Займе лише кілька хвилин.\n\n"
-    "Натисніть кнопку нижче, щоб розпочати!"
+    "Натисніть «Старт», щоб розпочати!"
 )
 
 PROMO_TEXT = (
@@ -103,11 +103,18 @@ def calculate_level(score: int, total: int) -> str:
     return "C1"
 
 
-def format_question(question: dict) -> str:
+def format_question(question: dict, chosen: str | None = None) -> str:
     options = question["options"]
-    question_text = question["text"].replace("___", "[___]")
+    question_text = question["text"]
+
+    if chosen is not None:
+        answer = options[chosen]
+        question_text = question_text.replace("___", f"[{answer} ✅]", 1)
+    else:
+        question_text = question_text.replace("___", "[___]")
+
     return (
-        f"🗣️ Питання {question['id']} з 15\n\n"
+        f"Питання {question['id']} з {len(QUESTIONS)}\n\n"
         f"{question_text}\n\n"
         f"A) {options['A']}\n"
         f"B) {options['B']}\n"
@@ -115,22 +122,17 @@ def format_question(question: dict) -> str:
     )
 
 
-async def confirm_answer_choice(
-    bot: Bot,
+async def show_selected_answer(
     callback: CallbackQuery,
     question: dict,
     chosen: str,
 ) -> None:
-    if callback.message:
-        await callback.message.edit_reply_markup(reply_markup=None)
+    if not callback.message:
+        return
 
-    chat_id = callback.message.chat.id if callback.message else callback.from_user.id
-    option_text = question["options"][chosen]
-    await send_with_typing(
-        bot,
-        chat_id,
-        f"✅ Ви обрали варіант {chosen}: {option_text}",
-        delay=0.6,
+    await callback.message.edit_text(
+        text=format_question(question, chosen=chosen),
+        reply_markup=None,
     )
 
 
@@ -173,6 +175,7 @@ async def start_test(callback: CallbackQuery, state: FSMContext, bot: Bot) -> No
     await callback.answer()
 
     try:
+        await state.clear()
         await state.set_state(TestStates.answering)
         await state.update_data(
             current_index=0,
@@ -228,7 +231,8 @@ async def process_answer(
             score += 1
 
         if callback.message:
-            await confirm_answer_choice(bot, callback, question, chosen)
+            await show_selected_answer(callback, question, chosen)
+            await asyncio.sleep(0.6)
 
         next_index = current_index + 1
         chat_id = callback.message.chat.id if callback.message else callback.from_user.id
@@ -249,6 +253,7 @@ async def process_answer(
                 result_text,
                 delay=1.2,
                 parse_mode=ParseMode.HTML,
+                reply_markup=after_test_keyboard(),
             )
 
             if not END_IMAGE.exists():
@@ -260,7 +265,6 @@ async def process_answer(
                 chat_id=chat_id,
                 photo=FSInputFile(END_IMAGE),
                 caption=PROMO_TEXT,
-                reply_markup=consultation_keyboard(),
             )
 
             logger.info(
