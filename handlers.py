@@ -70,13 +70,13 @@ QUESTIONS = load_questions()
 
 
 async def send_with_typing(
-    bot: Bot,
-    chat_id: int,
-    text: str,
-    *,
-    reply_markup=None,
-    delay: float = 1.0,
-    parse_mode: str | None = None,
+        bot: Bot,
+        chat_id: int,
+        text: str,
+        *,
+        reply_markup=None,
+        delay: float = 1.0,
+        parse_mode: str | None = None,
 ) -> Message:
     await bot.send_chat_action(chat_id=chat_id, action="typing")
     await asyncio.sleep(delay)
@@ -123,9 +123,9 @@ def format_question(question: dict, chosen: str | None = None) -> str:
 
 
 async def show_selected_answer(
-    callback: CallbackQuery,
-    question: dict,
-    chosen: str,
+        callback: CallbackQuery,
+        question: dict,
+        chosen: str,
 ) -> None:
     if not callback.message:
         return
@@ -177,9 +177,11 @@ async def start_test(callback: CallbackQuery, state: FSMContext, bot: Bot) -> No
     try:
         await state.clear()
         await state.set_state(TestStates.answering)
+        # Ініціалізуємо список для збору відповідей та лічильник балів
         await state.update_data(
             current_index=0,
             score=0,
+            report_lines=[],
         )
 
         if callback.message:
@@ -199,9 +201,10 @@ async def start_test(callback: CallbackQuery, state: FSMContext, bot: Bot) -> No
 
 @router.callback_query(F.data.startswith("answer:"))
 async def process_answer(
-    callback: CallbackQuery,
-    state: FSMContext,
-    bot: Bot,
+        callback: CallbackQuery,
+        state: FSMContext,
+        bot: Bot,
+        admin_id: int,
 ) -> None:
     await callback.answer()
 
@@ -216,6 +219,7 @@ async def process_answer(
         data = await state.get_data()
         current_index = data.get("current_index", 0)
         score = data.get("score", 0)
+        report_lines = data.get("report_lines", [])
 
         question = QUESTIONS[current_index]
         if question["id"] != question_id:
@@ -227,8 +231,23 @@ async def process_answer(
             )
             return
 
-        if chosen == question["correct"]:
+        options = question["options"]
+        correct = question["correct"]
+        chosen_text = options.get(chosen, chosen)
+        correct_text = options.get(correct, correct)
+
+        # Перевіряємо відповідь та формуємо рядок для звіту
+        if chosen == correct:
             score += 1
+            report_lines.append(
+                f"🔹 Питання {question['id']}: {question['text']}\n"
+                f"   Відповідь: {chosen}) {chosen_text} (✅)"
+            )
+        else:
+            report_lines.append(
+                f"🔹 Питання {question['id']}: {question['text']}\n"
+                f"   Відповідь: {chosen}) {chosen_text} (❌ Правильно: {correct}) {correct_text})"
+            )
 
         if callback.message:
             await show_selected_answer(callback, question, chosen)
@@ -240,6 +259,28 @@ async def process_answer(
         if next_index >= len(QUESTIONS):
             await state.clear()
             level = calculate_level(score, len(QUESTIONS))
+
+            # Формуємо інформацію про користувача для адміна
+            user = callback.from_user
+            user_link = f"@{user.username}" if user.username else user.full_name
+
+            # Збираємо весь звіт в одне повідомлення
+            admin_report = (
+                    f"📋 **Новий результат тесту з англійської!**\n"
+                    f"👤 Користувач: {user_link} (ID: `{user.id}`)\n"
+                    f"🏆 Балів: {score}/{len(QUESTIONS)}\n"
+                    f"📊 Рівень: **{level}**\n\n"
+                    f"**Деталі тесту та помилки:**\n\n" +
+                    "\n\n".join(report_lines)
+            )
+
+            # Надсилаємо єдине повідомлення адміністратору
+            await bot.send_message(
+                chat_id=admin_id,
+                text=admin_report,
+                parse_mode=ParseMode.HTML,
+            )
+
             result_text = (
                 f"🎯 Результат тесту\n\n"
                 f"Правильних відповідей: {score} з {len(QUESTIONS)}\n"
@@ -269,13 +310,18 @@ async def process_answer(
 
             logger.info(
                 "User %s completed test: score=%s, level=%s",
-                callback.from_user.id,
+                user.id,
                 score,
                 level,
             )
             return
 
-        await state.update_data(current_index=next_index, score=score)
+        # Зберігаємо оновлений індекс, бал та накопичений звіт у стейт
+        await state.update_data(
+            current_index=next_index,
+            score=score,
+            report_lines=report_lines,
+        )
         await send_question(bot, chat_id, next_index)
 
     except Exception:
@@ -294,9 +340,9 @@ async def process_answer(
 
 @router.callback_query(F.data == "request_consultation")
 async def request_consultation(
-    callback: CallbackQuery,
-    state: FSMContext,
-    bot: Bot,
+        callback: CallbackQuery,
+        state: FSMContext,
+        bot: Bot,
 ) -> None:
     await callback.answer()
 
@@ -322,10 +368,10 @@ async def request_consultation(
 
 @router.message(TestStates.waiting_for_phone, F.contact)
 async def process_contact(
-    message: Message,
-    state: FSMContext,
-    bot: Bot,
-    admin_id: int,
+        message: Message,
+        state: FSMContext,
+        bot: Bot,
+        admin_id: int,
 ) -> None:
     contact = message.contact
     user = message.from_user
