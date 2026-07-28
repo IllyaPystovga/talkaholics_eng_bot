@@ -148,8 +148,18 @@ async def send_question(bot: Bot, chat_id: int, question_index: int) -> None:
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
-    await state.clear()
     user = message.from_user
+    current_state = await state.get_state()
+    data = await state.get_data()
+
+    # Якщо користувач уже в процесі тесту і чомусь викликав /start, дозволяємо продовжити з того ж місця
+    if current_state == TestStates.answering.state and "current_index" in data:
+        current_index = data.get("current_index", 0)
+        await message.answer("🔄 Ви продовжуєте перерваний тест з поточного питання:")
+        await send_question(bot, message.chat.id, current_index)
+        return
+
+    await state.clear()
     logger.info("User %s started the bot", user.id if user else "unknown")
 
     try:
@@ -177,7 +187,6 @@ async def start_test(callback: CallbackQuery, state: FSMContext, bot: Bot) -> No
     try:
         await state.clear()
         await state.set_state(TestStates.answering)
-        # Ініціалізуємо список для збору відповідей та лічильник балів
         await state.update_data(
             current_index=0,
             score=0,
@@ -236,17 +245,14 @@ async def process_answer(
         chosen_text = options.get(chosen, chosen)
         correct_text = options.get(correct, correct)
 
-        # Перевіряємо відповідь та формуємо рядок для звіту
+        # Перевірка відповіді: якщо неправильно — додаємо ТІЛЬКИ у список помилок
         if chosen == correct:
             score += 1
-            report_lines.append(
-                f"🔹 Питання {question['id']}: {question['text']}\n"
-                f"   Відповідь: {chosen}) {chosen_text} (✅)"
-            )
         else:
             report_lines.append(
-                f"🔹 Питання {question['id']}: {question['text']}\n"
-                f"   Відповідь: {chosen}) {chosen_text} (❌ Правильно: {correct}) {correct_text})"
+                f"❌ Питання {question['id']}: {question['text']}\n"
+                f"   Відповідь користувача: {chosen}) {chosen_text}\n"
+                f"   Правильна відповідь: {correct}) {correct_text}"
             )
 
         if callback.message:
@@ -260,21 +266,24 @@ async def process_answer(
             await state.clear()
             level = calculate_level(score, len(QUESTIONS))
 
-            # Формуємо інформацію про користувача для адміна
             user = callback.from_user
             user_link = f"@{user.username}" if user.username else user.full_name
 
-            # Збираємо весь звіт в одне повідомлення
+            # Формуємо звіт виключно з помилок (або повідомляємо, що помилок немає)
+            if report_lines:
+                mistakes_block = "\n\n".join(report_lines)
+            else:
+                mistakes_block = "🎉 Користувач пройшов тест без жодної помилки!"
+
             admin_report = (
-                    f"📋 **Новий результат тесту з англійської!**\n"
-                    f"👤 Користувач: {user_link} (ID: `{user.id}`)\n"
-                    f"🏆 Балів: {score}/{len(QUESTIONS)}\n"
-                    f"📊 Рівень: **{level}**\n\n"
-                    f"**Деталі тесту та помилки:**\n\n" +
-                    "\n\n".join(report_lines)
+                f"📋 **Результати тесту з англійської**\n"
+                f"👤 Користувач: {user_link} (ID: `{user.id}`)\n"
+                f"🏆 Балів: {score}/{len(QUESTIONS)}\n"
+                f"📊 Рівень: **{level}**\n\n"
+                f"**Список допущених помилок:**\n\n"
+                f"{mistakes_block}"
             )
 
-            # Надсилаємо єдине повідомлення адміністратору
             await bot.send_message(
                 chat_id=admin_id,
                 text=admin_report,
@@ -316,7 +325,7 @@ async def process_answer(
             )
             return
 
-        # Зберігаємо оновлений індекс, бал та накопичений звіт у стейт
+        # Зберігаємо поточний стан (тест продовжиться з цього індексу у випадку перезапуску/повторного виклику)
         await state.update_data(
             current_index=next_index,
             score=score,
@@ -330,12 +339,13 @@ async def process_answer(
             callback.from_user.id,
         )
         chat_id = callback.message.chat.id if callback.message else callback.from_user.id
+
+        # Захист від втрати прогресу: зберігаємо стейт, а не скидаємо його одразу при помилці інтерфейсу
         await send_with_typing(
             bot,
             chat_id,
-            "На жаль, сталася помилка. Почніть тест заново командою /start.",
+            "⚠️ Виникла тимчасова помилка. Спробуйте надіслати /start, щоб продовжити тест з місця зупинки.",
         )
-        await state.clear()
 
 
 @router.callback_query(F.data == "request_consultation")
